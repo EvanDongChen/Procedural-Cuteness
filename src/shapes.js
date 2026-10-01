@@ -113,6 +113,21 @@ export function flowerPath(cx, cy, petalR, petals = 5) {
   return d.trim();
 }
 
+// A small curved teardrop tail, anchored at (cx,cy) and swooping out to one side.
+export function tailPath(cx, cy, len, width, dir = 1) {
+  const endX = cx + len * dir;
+  const endY = cy - len * 0.35;
+  const c1x = cx + len * 0.3 * dir;
+  const c1y = cy - len * 0.6;
+  const c2x = cx + len * 0.75 * dir;
+  const c2y = cy - len * 0.55;
+  return (
+    `M ${cx.toFixed(2)} ${(cy - width / 2).toFixed(2)} ` +
+    `Q ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${endX.toFixed(2)} ${endY.toFixed(2)} ` +
+    `Q ${c2x.toFixed(2)} ${(c2y + width * 0.8).toFixed(2)} ${cx.toFixed(2)} ${(cy + width / 2).toFixed(2)} Z`
+  );
+}
+
 export function bbox(points) {
   let xmin = Infinity, ymin = Infinity, xmax = -Infinity, ymax = -Infinity;
   for (const [x, y] of points) {

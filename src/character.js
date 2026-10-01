@@ -11,6 +11,10 @@ import {
   buildBlush,
   buildMouth,
   buildAccessory,
+  buildGradientDefs,
+  buildShadow,
+  buildShine,
+  buildTail,
 } from "./parts.js";
 
 const CANVAS = 300; // working coordinate space before reframing
@@ -49,11 +53,12 @@ export function generateParams(seedInput) {
 
   const accessory = choice(["none", "bow", "flower", "star", "headband"], [3, 2, 2, 1, 1]);
   const accessorySize = headR * rndtri(0.18, 0.24, 0.3);
-  const accessorySide = choice([-1, 1]);
-  const accessoryOffset = [
-    accessorySide * headR * rndtri(0.55, 0.7, 0.85),
-    -headR * rndtri(0.55, 0.7, 0.85),
-  ];
+  // Sits on the head's top arc (angle measured from straight up), well inside
+  // the ear-free zone, instead of out near the ear base where it used to clip.
+  const accessoryAngleDeg = choice([-1, 1]) * rndtri(18, 30, 42);
+  const accessoryAngle = (accessoryAngleDeg * Math.PI) / 180;
+  const accessoryDist = headR * rndtri(0.78, 0.88, 0.95);
+  const accessoryOffset = [Math.sin(accessoryAngle) * accessoryDist, -Math.cos(accessoryAngle) * accessoryDist];
 
   return {
     seed: seedInput,
@@ -89,37 +94,48 @@ export function assemble(params) {
   // fresh noise (pattern placement, blob perturbation) get their own rng
   // reseeded deterministically from the same seed + a salt, so independently
   // reseeding noise streams never interfere with each other.
+  const uid = sanitizeId(params.seed);
   const pal = generatePalette(createRng(hashCombine(params.seed, "palette")));
   const rngBody = createRng(hashCombine(params.seed, "body"));
   const rngPattern = createRng(hashCombine(params.seed, "pattern"));
+  const rngTail = createRng(hashCombine(params.seed, "tail"));
 
-  const bodyLayer = buildBody(rngBody, params, pal);
+  const defs = buildGradientDefs(uid, pal);
+  const shadowLayer = buildShadow(params, pal);
+  const tailLayer = buildTail(rngTail, params, pal, uid);
+  const bodyLayer = buildBody(rngBody, params, pal, uid);
   const patternLayer = buildPattern(rngPattern, params, pal);
-  const headLayer = buildHead(createRng(hashCombine(params.seed, "head")), params, pal);
-  const earsLayer = buildEars(params, pal);
-  const limbsLayer = buildLimbs(params, pal);
+  const headLayer = buildHead(createRng(hashCombine(params.seed, "head")), params, pal, uid);
+  const earsLayer = buildEars(params, pal, uid);
+  const limbsLayer = buildLimbs(params, pal, uid);
+  const shineLayer = buildShine(params);
   const blushLayer = buildBlush(params, pal);
   const eyesLayer = buildEyes(params, pal);
   const mouthLayer = buildMouth(params, pal);
   const accessoryLayer = buildAccessory(params, pal);
 
   const svgBody =
+    defs +
+    shadowLayer +
+    tailLayer +
     earsLayer +
     bodyLayer +
     patternLayer +
     limbsLayer +
     headLayer +
+    shineLayer +
     blushLayer +
     eyesLayer +
     mouthLayer +
     accessoryLayer;
 
   const pad = 20;
+  const tailReach = params.bodyRx * 2.1; // generous: covers tail/limb/shadow overshoot on either side
   const box = bbox([
     [params.headCx - params.headR, params.headCy - params.headR - params.earSize * 1.6],
     [params.headCx + params.headR, params.headCy + params.headR],
-    [params.bodyCx - params.bodyRx, params.bodyCy - params.bodyRy],
-    [params.bodyCx + params.bodyRx, params.bodyCy + params.bodyRy + params.limbR],
+    [params.bodyCx - tailReach, params.bodyCy - params.bodyRy],
+    [params.bodyCx + tailReach, params.bodyCy + params.bodyRy + params.limbR * 1.5],
   ]);
   const vb = `${(box.xmin - pad).toFixed(1)} ${(box.ymin - pad).toFixed(1)} ${(box.xmax - box.xmin + pad * 2).toFixed(1)} ${(box.ymax - box.ymin + pad * 2).toFixed(1)}`;
 
@@ -128,4 +144,16 @@ export function assemble(params) {
 
 function hashCombine(seed, salt) {
   return `${seed}::${salt}`;
+}
+
+// Gradient ids must be unique per character when several are inlined on one
+// page (e.g. the recent-friends gallery), or they'd all share one <defs>.
+function sanitizeId(seed) {
+  return String(seed).replace(/[^a-zA-Z0-9]/g, "") + "-" + Math.abs(hashInt(String(seed)));
+}
+
+function hashInt(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return h;
 }
