@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Procedural Cuteness</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Procedural Cuteness</h1>
+  <p class="subtitle">Type a seed, or mash the dice, to meet a new kawaii friend.</p>
+
+  <div class="card">
+    <div id="canvas"></div>
+    <div id="name-label"></div>
+
+    <div class="controls">
+      <input id="seed-input" type="text" placeholder="type a seed..." />
+      <button id="randomize-btn">🎲 Randomize</button>
+    </div>
+
+    <div class="downloads">
+      <button id="download-svg-btn">Download SVG</button>
+      <button id="download-png-btn">Download PNG</button>
+    </div>
+  </div>
+
+  <p class="gallery-title">Recently met friends</p>
+  <div id="gallery"></div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
